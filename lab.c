@@ -1,93 +1,164 @@
-/*
-
-Rishith loves kalyani hello
-1) A person makes a call to an IVRS enabled call centre. After listening to a list of language options, he selects the preferred language. 
-Further, he wishes to speak to the customer care executive. Imagine the executive is not free to take calls immediately since there are 
-already 5 people waiting to place their complaint. Identify which data structure can handle this situation and perform insertion, deletion, 
-and check for exception conditions, if required.
-
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
-struct Queue {
-    int *language;
-    int front, rear, itemCount, maxSize;
-};
+#define size 25
 
-struct Queue* createQueue(int maxSize) {
-    struct Queue* queue = (struct Queue*)malloc(sizeof(struct Queue));
-    queue->language = (int*)malloc(maxSize * sizeof(int));
-    queue->front = 0;
-    queue->rear = -1;
-    queue->itemCount = 0;
-    queue->maxSize = maxSize;
-    return queue;
+struct stack {
+    char elem[size];
+    int top;
+} s;
+
+int findStringLength(char *str) {
+    int l = 0;
+    while (*str != '\0') {
+        l++;
+        str++;
+    }
+    return l;
 }
 
-int isFull(struct Queue* queue) {
-    return queue->itemCount == queue->maxSize;
-}
-
-int isEmpty(struct Queue* queue) {
-    return queue->itemCount == 0;
-}
-
-void enqueue(struct Queue* queue, int langOption) {
-    if (isFull(queue)) {
-        printf("The customer care executive is currently busy. Please try again later.\n");
+void push(char val) {
+    if (s.top == (size - 1)) {
+        printf("STACK IS FULL!!\n");
     } else {
-        queue->rear = (queue->rear + 1) % queue->maxSize;
-        queue->language[queue->rear] = langOption;
-        queue->itemCount++;
-        printf("Your preferred language option %d is added to the queue.\n", langOption);
+        s.top = s.top + 1;
+        s.elem[s.top] = val;
     }
 }
 
-void dequeue(struct Queue* queue) {
-    if (isEmpty(queue)) {
-        printf("The queue is empty. No more callers are waiting.\n");
+char pop() {
+    if (s.top == -1) {
+        printf("STACK IS EMPTY!!\n");
+        return '\0';
     } else {
-        int dequeuedLanguage = queue->language[queue->front];
-        queue->front = (queue->front + 1) % queue->maxSize;
-        queue->itemCount--;
-        printf("Caller with preferred language option %d is being attended to.\n", dequeuedLanguage);
+        char ch = s.elem[s.top];
+        s.top = s.top - 1;
+        return ch;
     }
 }
 
-void display(struct Queue* queue) {
-    printf("Queue status: ");
-    if (isEmpty(queue)) {
-        printf("No callers are currently waiting.\n");
+int isEmpty() {
+    return s.top == -1;
+}
+
+char peek() {
+    if (s.top == -1) {
+        return '\0';
     } else {
-        printf("Callers with language options: ");
-        int i;
-        for (i = 0; i < queue->itemCount; i++) {
-            printf("%d ", queue->language[(queue->front + i) % queue->maxSize]);
+        return s.elem[s.top];
+    }
+}
+
+int balance(char a[], int len) {
+    int i;
+    for (i = 0; i < len; i++) {
+        if (a[i] == '(' || a[i] == '{' || a[i] == '[') {
+            push(a[i]);
+        } else if (a[i] == ')' || a[i] == '}' || a[i] == ']') {
+            if (s.top == -1) {
+                return i;
+            } else if ((s.elem[s.top] == '(' && a[i] == ')') || (s.elem[s.top] == '[' && a[i] == ']') || (s.elem[s.top] == '{' && a[i] == '}')) {
+                pop();
+            } else {
+                return i;
+            }
         }
-        printf("\n");
     }
+    if (s.top == -1) {
+        return -1;
+    }
+    return s.top;
+}
+
+int precedence(char op) {
+    if (op == '+' || op == '-') {
+        return 1;
+    } else if (op == '*' || op == '/') {
+        return 2;
+    } else if (op == '^') {
+        return 3;
+    } else {
+        return -1;
+    }
+}
+
+void convertInfixToPostfix(char *infix) {
+    int i;
+    int j = -1;
+    for (i = 0; infix[i]; ++i) {
+        if (isalnum(infix[i]))
+            infix[++j] = infix[i];
+        else if (infix[i] == '(' || infix[i] == '[' || infix[i] == '{')
+            push(infix[i]);
+        else if (infix[i] == ')' || infix[i] == '}' || infix[i] == ']') {
+            while (!isEmpty() && peek() != '(' && peek() != '[' && peek() != '{')
+                infix[++j] = pop();
+            pop();
+        } else {
+            while (!isEmpty() && precedence(infix[i]) <= precedence(peek()))
+                infix[++j] = pop();
+            push(infix[i]);
+        }
+    }
+    while (!isEmpty())
+        infix[++j] = pop();
+    infix[++j] = '\0';
+}
+
+int applyOp(int a, int b, char op) {
+    if (op == '+')
+        return a + b;
+    else if (op == '-')
+        return a - b;
+    else if (op == '*')
+        return a * b;
+    else if (op == '/') {
+        if (b != 0)
+            return a / b;
+        else {
+            printf("division by zero error!\n");
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        printf("invalid operator!\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+int evaluatePostfix(char postfix[]) {
+    int i;
+    int val, A, B;
+    for (i = 0; postfix[i] != '\0'; i++) {
+        char ch = postfix[i];
+        if (isdigit(ch)) {
+            push(ch - '0');
+        } else if (ch == '+' || ch == '-' || ch == '*' || ch == '/') {
+            A = pop();
+            B = pop();
+            val = applyOp(B, A, ch);
+            push(val);
+        }
+    }
+    return pop();
 }
 
 int main() {
-    int maxSize;
-    printf("Enter the maximum limit of customers that can be in the queue: ");
-    scanf("%d", &maxSize);
-
-    struct Queue* queue = createQueue(maxSize);
-
-    // Enqueue language options
-    for (int i = 1; i <= maxSize + 1; i++) {
-        enqueue(queue, i);
+    printf("Enter the infix expression : ");
+    char a[size];
+    scanf("%s", a);
+    int len = findStringLength(a);
+    s.top = -1;
+    int c = balance(a, len);
+    if (c == -1) {
+        printf("The expression is balanced correctly.\n");
+        convertInfixToPostfix(a);
+        printf("postfix expression: %s\n", a);
+        int result = evaluatePostfix(a);
+        printf("The result is: %d\n", result);
+    } else {
+        printf("expression is not balanced correctly.\n");
     }
-
-    // Display queue status
-    display(queue);
-
-    // Dequeue callers
-    for (int i = 0; i < maxSize; i++) {
-        dequeue(queue);
-    }
-
     return 0;
 }
-*/
